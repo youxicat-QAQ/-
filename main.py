@@ -1,156 +1,156 @@
 """
-像素冲浪猫娘 - 像素冲浪猫娘小游戏
-使用Pygame制作的横向卷轴冲浪游戏
+Pixel Surf Cat - 像素冲浪猫娘小游戏
+A side-scrolling surf game built with Pygame.
 """
 
-import pygame  # 导入Pygame库，用于游戏开发
-import random  # 导入随机数模块，用于随机事件
-import math  # 导入数学模块，用于数学计算
-import struct  # 导入结构体模块，用于音频数据处理
-import sys  # 导入系统模块，用于退出程序
+import pygame
+import random
+import math
+import struct
+import sys
 
 # ============================================================
 # INITIALIZATION
 # ============================================================
-pygame.init()  # 初始化Pygame
-pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=1024)  # 初始化音频混音器
+pygame.init()
+pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=1024)
 
 # ============================================================
 # CONSTANTS
 # ============================================================
-WIDTH, HEIGHT = 800, 400  # 屏幕宽度和高度
-FPS = 60  # 每秒帧数
-GRAVITY = 0.6  # 重力加速度
-JUMP_VEL = -9.5  # 跳跃初始速度
-BASE_SCROLL = 3  # 基础滚动速度
-MAX_SCROLL = 8  # 最大滚动速度
-PLAYER_X = 160  # 玩家X位置
-WATER_BASE = 290  # 水面基础Y位置
-INITIAL_LIVES = 3  # 初始生命数
-OBSTACLE_INTERVAL = 90  # 障碍物间隔帧数（随时间减少）
-MIN_OBSTACLE_INTERVAL = 35  # 最小障碍物间隔
+WIDTH, HEIGHT = 800, 400
+FPS = 60
+GRAVITY = 0.6
+JUMP_VEL = -9.5
+BASE_SCROLL = 3
+MAX_SCROLL = 8
+PLAYER_X = 160
+WATER_BASE = 290
+INITIAL_LIVES = 3
+OBSTACLE_INTERVAL = 90  # frames between obstacles (decreases over time)
+MIN_OBSTACLE_INTERVAL = 35
 
 # States
-TITLE, PLAYING, GAME_OVER = 0, 1, 2  # 游戏状态：标题、游戏中、游戏结束
+TITLE, PLAYING, GAME_OVER = 0, 1, 2
 
 # ============================================================
 # COLORS (bright pixel palette)
 # ============================================================
-SKY_TOP = (80, 160, 255)  # 天空顶部颜色
-SKY_BOTTOM = (180, 220, 255)  # 天空底部颜色
-SUN_COLOR = (255, 240, 80)  # 太阳颜色
-SUN_GLOW = (255, 250, 180)  # 太阳光晕颜色
-CLOUD_WHITE = (255, 255, 255)  # 云白色
-CLOUD_SHADOW = (220, 220, 230)  # 云阴影
+SKY_TOP = (80, 160, 255)
+SKY_BOTTOM = (180, 220, 255)
+SUN_COLOR = (255, 240, 80)
+SUN_GLOW = (255, 250, 180)
+CLOUD_WHITE = (255, 255, 255)
+CLOUD_SHADOW = (220, 220, 230)
 
-WATER_DEEP = (20, 60, 160)  # 深水颜色
-WATER_MID = (30, 100, 200)  # 中水颜色
-WATER_LIGHT = (60, 160, 240)  # 浅水颜色
-WAVE_FOAM = (220, 240, 255)  # 波浪泡沫颜色
-WAVE_HIGHLIGHT = (120, 200, 255)  # 波浪高光颜色
+WATER_DEEP = (20, 60, 160)
+WATER_MID = (30, 100, 200)
+WATER_LIGHT = (60, 160, 240)
+WAVE_FOAM = (220, 240, 255)
+WAVE_HIGHLIGHT = (120, 200, 255)
 
-SAND = (230, 200, 150)  # 沙滩颜色
-SAND_DARK = (200, 170, 120)  # 深沙滩颜色
+SAND = (230, 200, 150)
+SAND_DARK = (200, 170, 120)
 
-CAT_FUR = (255, 220, 220)  # 猫毛颜色
-CAT_SWIMSUIT = (255, 80, 140)  # 猫泳衣颜色
-CAT_SWIMSUIT_DARK = (220, 50, 110)  # 猫泳衣深色
-CAT_EARS_INNER = (255, 180, 190)  # 猫耳朵内侧颜色
-CAT_EYES = (60, 40, 40)  # 猫眼睛颜色
-CAT_MOUTH = (200, 60, 60)  # 猫嘴巴颜色
-CAT_WHISKERS = (80, 60, 60)  # 猫胡须颜色
-CAT_TAIL_TIP = (255, 255, 255)  # 猫尾巴尖颜色
-CAT_HEADBAND = (255, 100, 150)  # 猫头带颜色
-CAT_BLUSH = (255, 160, 180)  # 猫脸红颜色
+CAT_FUR = (255, 220, 220)
+CAT_SWIMSUIT = (255, 80, 140)
+CAT_SWIMSUIT_DARK = (220, 50, 110)
+CAT_EARS_INNER = (255, 180, 190)
+CAT_EYES = (60, 40, 40)
+CAT_MOUTH = (200, 60, 60)
+CAT_WHISKERS = (80, 60, 60)
+CAT_TAIL_TIP = (255, 255, 255)
+CAT_HEADBAND = (255, 100, 150)
+CAT_BLUSH = (255, 160, 180)
 
-SURFBOARD_TOP = (255, 150, 40)  # 冲浪板顶部颜色
-SURFBOARD_BOTTOM = (200, 190, 180)  # 冲浪板底部颜色
-SURFBOARD_STRIPE1 = (255, 255, 255)  # 冲浪板条纹1颜色
-SURFBOARD_STRIPE2 = (80, 200, 255)  # 冲浪板条纹2颜色
+SURFBOARD_TOP = (255, 150, 40)
+SURFBOARD_BOTTOM = (200, 190, 180)
+SURFBOARD_STRIPE1 = (255, 255, 255)
+SURFBOARD_STRIPE2 = (80, 200, 255)
 
-ROCK_MAIN = (130, 115, 100)  # 岩石主颜色
-ROCK_LIGHT = (155, 140, 125)  # 岩石亮色
-ROCK_DARK = (100, 85, 70)  # 岩石暗色
+ROCK_MAIN = (130, 115, 100)
+ROCK_LIGHT = (155, 140, 125)
+ROCK_DARK = (100, 85, 70)
 
-WOOD_MAIN = (160, 120, 70)  # 木头主颜色
-WOOD_DARK = (120, 85, 45)  # 木头暗色
-WOOD_LIGHT = (180, 145, 95)  # 木头亮色
+WOOD_MAIN = (160, 120, 70)
+WOOD_DARK = (120, 85, 45)
+WOOD_LIGHT = (180, 145, 95)
 
-SEAGULL_BODY = (240, 240, 245)  # 海鸥身体颜色
-SEAGULL_WING = (200, 200, 210)  # 海鸥翅膀颜色
-SEAGULL_BEAK = (255, 200, 50)  # 海鸥喙颜色
-SEAGULL_EYE = (40, 40, 40)  # 海鸥眼睛颜色
+SEAGULL_BODY = (240, 240, 245)
+SEAGULL_WING = (200, 200, 210)
+SEAGULL_BEAK = (255, 200, 50)
+SEAGULL_EYE = (40, 40, 40)
 
-SHARK_MAIN = (90, 90, 105)  # 鲨鱼主颜色
-SHARK_DARK = (65, 65, 80)  # 鲨鱼暗色
-SHARK_LIGHT = (120, 120, 135)  # 鲨鱼亮色
+SHARK_MAIN = (90, 90, 105)
+SHARK_DARK = (65, 65, 80)
+SHARK_LIGHT = (120, 120, 135)
 
-UI_WHITE = (255, 255, 255)  # UI白色
-UI_BLACK = (20, 20, 30)  # UI黑色
-UI_SHADOW = (0, 0, 0, 80)  # UI阴影
-UI_GOLD = (255, 215, 0)  # UI金色
-UI_PINK = (255, 150, 200)  # UI粉色
+UI_WHITE = (255, 255, 255)
+UI_BLACK = (20, 20, 30)
+UI_SHADOW = (0, 0, 0, 80)
+UI_GOLD = (255, 215, 0)
+UI_PINK = (255, 150, 200)
 
-GRASS_GREEN = (100, 200, 80)  # 草绿色
-SHELL_PINK = (255, 180, 170)  # 贝壳粉色
+GRASS_GREEN = (100, 200, 80)
+SHELL_PINK = (255, 180, 170)
 
 # ============================================================
 # SOUND GENERATION
 # ============================================================
-def make_sound(freq, duration, vol=0.25, wave='square'):  # 生成合成音效函数
+def make_sound(freq, duration, vol=0.25, wave='square'):
     """Generate a synth sound effect. wave: square|sine|saw|noise"""
-    sr = 22050  # 采样率
-    n = int(sr * duration)  # 样本数
-    frames = []  # 帧列表
-    for i in range(n):  # 循环生成每个样本
-        t = i / sr  # 时间
-        phase = (t * freq) % 1.0  # 相位
-        if wave == 'square':  # 方波
-            v = 1.0 if phase < 0.5 else -1.0  # 方波值
-        elif wave == 'saw':  # 锯齿波
-            v = 2.0 * phase - 1.0  # 锯齿波值
-        elif wave == 'sine':  # 正弦波
-            v = math.sin(2 * math.pi * freq * t)  # 正弦波值
-        elif wave == 'noise':  # 噪声
-            v = random.uniform(-1, 1)  # 随机噪声值
-        else:  # 默认正弦波
-            v = math.sin(2 * math.pi * freq * t)  # 正弦波值
+    sr = 22050
+    n = int(sr * duration)
+    frames = []
+    for i in range(n):
+        t = i / sr
+        phase = (t * freq) % 1.0
+        if wave == 'square':
+            v = 1.0 if phase < 0.5 else -1.0
+        elif wave == 'saw':
+            v = 2.0 * phase - 1.0
+        elif wave == 'sine':
+            v = math.sin(2 * math.pi * freq * t)
+        elif wave == 'noise':
+            v = random.uniform(-1, 1)
+        else:
+            v = math.sin(2 * math.pi * freq * t)
 
-        sample = int(v * vol * 30000)  # 计算样本值
-        sample = max(-32768, min(32767, sample))  # 限制范围
-        frames.append(struct.pack('<h', sample))  # 添加左声道
-        frames.append(struct.pack('<h', sample))  # 添加右声道
+        sample = int(v * vol * 30000)
+        sample = max(-32768, min(32767, sample))
+        frames.append(struct.pack('<h', sample))
+        frames.append(struct.pack('<h', sample))
 
-    return pygame.mixer.Sound(buffer=b''.join(frames))  # 返回声音对象
+    return pygame.mixer.Sound(buffer=b''.join(frames))
 
 
-def make_sweep(freq_start, freq_end, duration, vol=0.2):  # 生成频率扫描音效函数
+def make_sweep(freq_start, freq_end, duration, vol=0.2):
     """Frequency sweep sound effect."""
-    sr = 22050  # 采样率
-    n = int(sr * duration)  # 样本数
-    frames = []  # 帧列表
-    for i in range(n):  # 循环生成每个样本
-        t = i / sr  # 时间
-        progress = t / duration  # 进度
-        freq = freq_start + (freq_end - freq_start) * progress  # 当前频率
-        phase = (t * freq) % 1.0  # 相位
-        v = 1.0 if phase < 0.5 else -1.0  # 方波值
-        env = 1.0 - progress  # 包络
-        sample = int(v * vol * env * 30000)  # 计算样本值
-        sample = max(-32768, min(32767, sample))  # 限制范围
-        frames.append(struct.pack('<h', sample))  # 添加左声道
-        frames.append(struct.pack('<h', sample))  # 添加右声道
-    return pygame.mixer.Sound(buffer=b''.join(frames))  # 返回声音对象
+    sr = 22050
+    n = int(sr * duration)
+    frames = []
+    for i in range(n):
+        t = i / sr
+        progress = t / duration
+        freq = freq_start + (freq_end - freq_start) * progress
+        phase = (t * freq) % 1.0
+        v = 1.0 if phase < 0.5 else -1.0
+        env = 1.0 - progress
+        sample = int(v * vol * env * 30000)
+        sample = max(-32768, min(32767, sample))
+        frames.append(struct.pack('<h', sample))
+        frames.append(struct.pack('<h', sample))
+    return pygame.mixer.Sound(buffer=b''.join(frames))
 
 
-def make_music():  # 生成背景音乐函数
+def make_music():
     """Generate background chiptune music loop (about 4 seconds)."""
-    sr = 22050  # 采样率
-    duration = 4.0  # 时长
-    n = int(sr * duration)  # 样本数
+    sr = 22050
+    duration = 4.0
+    n = int(sr * duration)
 
     # Melody notes (C major pentatonic feel)
-    melody = [  # 旋律音符
+    melody = [
         (523, 0.15), (587, 0.15), (659, 0.15), (784, 0.15),
         (659, 0.15), (587, 0.15), (523, 0.15), (784, 0.15),
         (440, 0.15), (523, 0.15), (587, 0.15), (659, 0.15),
@@ -169,7 +169,7 @@ def make_music():  # 生成背景音乐函数
     ]
 
     # Bass notes
-    bass = [  # 贝斯音符
+    bass = [
         (131, 0.5), (165, 0.5), (131, 0.5), (165, 0.5),
         (131, 0.5), (165, 0.5), (131, 0.5), (165, 0.5),
         (110, 0.5), (131, 0.5), (110, 0.5), (131, 0.5),
@@ -177,117 +177,117 @@ def make_music():  # 生成背景音乐函数
     ]
 
     # Hi-hat pattern
-    hat = []  # 军鼓模式
-    for i in range(int(duration / 0.125)):  # 循环生成军鼓
-        hat.append((0, 0.1) if i % 2 == 0 else (0, 0.05))  # 交替音量
+    hat = []
+    for i in range(int(duration / 0.125)):
+        hat.append((0, 0.1) if i % 2 == 0 else (0, 0.05))
 
     # Generate all audio data
-    frames = bytearray(n * 4)  # 16位立体声 = 4字节每帧
-    for i in range(n):  # 循环生成每个样本
-        t = i / sr  # 时间
+    frames = bytearray(n * 4)  # 16-bit stereo = 4 bytes per frame
+    for i in range(n):
+        t = i / sr
 
         # Melody
-        mel_idx = int(t / 0.3) % len(melody)  # 旋律索引
-        mel_freq, mel_dur = melody[mel_idx]  # 旋律频率和时长
-        local_t = t % 0.3  # 本地时间
-        if local_t < mel_dur and mel_freq > 0:  # 如果在音符内
-            mel_phase = (local_t * mel_freq) % 1.0  # 旋律相位
-            mel_v = 1.0 if mel_phase < 0.5 else -1.0  # 旋律值
-            mel_env = 1.0 - local_t / mel_dur  # 旋律包络
-            mel_sample = mel_v * 0.08 * mel_env  # 旋律样本
-        else:  # 否则静音
-            mel_sample = 0  # 旋律样本为0
+        mel_idx = int(t / 0.3) % len(melody)
+        mel_freq, mel_dur = melody[mel_idx]
+        local_t = t % 0.3
+        if local_t < mel_dur and mel_freq > 0:
+            mel_phase = (local_t * mel_freq) % 1.0
+            mel_v = 1.0 if mel_phase < 0.5 else -1.0
+            mel_env = 1.0 - local_t / mel_dur
+            mel_sample = mel_v * 0.08 * mel_env
+        else:
+            mel_sample = 0
 
         # Bass
-        bass_idx = int(t / 0.5) % len(bass)  # 贝斯索引
-        bass_freq, bass_dur = bass[bass_idx]  # 贝斯频率和时长
-        local_t_bass = t % 0.5  # 本地贝斯时间
-        if local_t_bass < bass_dur and bass_freq > 0:  # 如果在贝斯音符内
-            bass_phase = (local_t_bass * bass_freq) % 1.0  # 贝斯相位
-            bass_v = 1.0 if bass_phase < 0.5 else -1.0  # 贝斯值
-            bass_env = 1.0 - local_t_bass / bass_dur  # 贝斯包络
-            bass_sample = bass_v * 0.12 * bass_env  # 贝斯样本
-        else:  # 否则静音
-            bass_sample = 0  # 贝斯样本为0
+        bass_idx = int(t / 0.5) % len(bass)
+        bass_freq, bass_dur = bass[bass_idx]
+        local_t_bass = t % 0.5
+        if local_t_bass < bass_dur and bass_freq > 0:
+            bass_phase = (local_t_bass * bass_freq) % 1.0
+            bass_v = 1.0 if bass_phase < 0.5 else -1.0
+            bass_env = 1.0 - local_t_bass / bass_dur
+            bass_sample = bass_v * 0.12 * bass_env
+        else:
+            bass_sample = 0
 
         # Hi-hat
-        hat_idx = int(t / 0.125) % len(hat)  # 军鼓索引
-        _, hat_dur = hat[hat_idx]  # 军鼓时长
-        local_t_hat = t % 0.125  # 本地军鼓时间
-        hat_v = 0  # 军鼓值
-        if local_t_hat < hat_dur:  # 如果在军鼓内
-            hat_v = random.uniform(-1, 1) * 0.04 * (1 - local_t_hat / hat_dur)  # 军鼓值
+        hat_idx = int(t / 0.125) % len(hat)
+        _, hat_dur = hat[hat_idx]
+        local_t_hat = t % 0.125
+        hat_v = 0
+        if local_t_hat < hat_dur:
+            hat_v = random.uniform(-1, 1) * 0.04 * (1 - local_t_hat / hat_dur)
 
         # Mix
-        mixed = mel_sample + bass_sample + hat_v  # 混合
-        mixed = max(-1, min(1, mixed))  # 限制混合值
-        sample = int(mixed * 30000)  # 计算样本
-        sample = max(-32768, min(32767, sample))  # 限制样本
+        mixed = mel_sample + bass_sample + hat_v
+        mixed = max(-1, min(1, mixed))
+        sample = int(mixed * 30000)
+        sample = max(-32768, min(32767, sample))
 
-        offset = i * 4  # 偏移
-        frames[offset:offset+4] = struct.pack('<h', sample) + struct.pack('<h', sample)  # 打包帧
+        offset = i * 4
+        frames[offset:offset+4] = struct.pack('<h', sample) + struct.pack('<h', sample)
 
-    return pygame.mixer.Sound(buffer=bytes(frames))  # 返回声音对象
+    return pygame.mixer.Sound(buffer=bytes(frames))
 
 
 # ============================================================
 # PRE-RENDER STATIC BACKGROUND
 # ============================================================
-def render_static_bg():  # 渲染静态背景函数
+def render_static_bg():
     """Render sky gradient + sun to a surface (no clouds/waves)."""
-    surf = pygame.Surface((WIDTH, HEIGHT))  # 创建表面
+    surf = pygame.Surface((WIDTH, HEIGHT))
     # Sky gradient
-    for y in range(WATER_BASE - 40):  # 循环Y坐标
-        t = y / (WATER_BASE - 40)  # 插值因子
-        r = int(SKY_TOP[0] + (SKY_BOTTOM[0] - SKY_TOP[0]) * t)  # 红色分量
-        g = int(SKY_TOP[1] + (SKY_BOTTOM[1] - SKY_TOP[1]) * t)  # 绿色分量
-        b = int(SKY_TOP[2] + (SKY_BOTTOM[2] - SKY_TOP[2]) * t)  # 蓝色分量
-        pygame.draw.line(surf, (r, g, b), (0, y), (WIDTH, y))  # 绘制线
+    for y in range(WATER_BASE - 40):
+        t = y / (WATER_BASE - 40)
+        r = int(SKY_TOP[0] + (SKY_BOTTOM[0] - SKY_TOP[0]) * t)
+        g = int(SKY_TOP[1] + (SKY_BOTTOM[1] - SKY_TOP[1]) * t)
+        b = int(SKY_TOP[2] + (SKY_BOTTOM[2] - SKY_TOP[2]) * t)
+        pygame.draw.line(surf, (r, g, b), (0, y), (WIDTH, y))
 
     # Sun glow
-    sun_x, sun_y = 680, 60  # 太阳位置
-    for r in range(60, 0, -4):  # 循环半径
-        alpha = max(0, 80 - r * 2)  # 透明度
-        glow = (SUN_GLOW[0], SUN_GLOW[1], SUN_GLOW[2])  # 光晕颜色
-        pygame.draw.circle(surf, glow, (sun_x, sun_y), r)  # 绘制光晕
+    sun_x, sun_y = 680, 60
+    for r in range(60, 0, -4):
+        alpha = max(0, 80 - r * 2)
+        glow = (SUN_GLOW[0], SUN_GLOW[1], SUN_GLOW[2])
+        pygame.draw.circle(surf, glow, (sun_x, sun_y), r)
     # Sun
-    pygame.draw.circle(surf, SUN_COLOR, (sun_x, sun_y), 25)  # 绘制太阳
-    pygame.draw.circle(surf, (255, 245, 150), (sun_x, sun_y), 20)  # 绘制太阳内部
+    pygame.draw.circle(surf, SUN_COLOR, (sun_x, sun_y), 25)
+    pygame.draw.circle(surf, (255, 245, 150), (sun_x, sun_y), 20)
 
     # Distant beach strip
-    beach_y = WATER_BASE - 25  # 海滩Y位置
-    for y_offset in range(25):  # 循环偏移
-        y = beach_y + y_offset  # 当前Y
-        shade = 1.0 - y_offset / 25  # 阴影因子
-        c = (int(SAND[0] * shade + WATER_MID[0] * (1 - shade)),  # 颜色计算
+    beach_y = WATER_BASE - 25
+    for y_offset in range(25):
+        y = beach_y + y_offset
+        shade = 1.0 - y_offset / 25
+        c = (int(SAND[0] * shade + WATER_MID[0] * (1 - shade)),
              int(SAND[1] * shade + WATER_MID[1] * (1 - shade)),
              int(SAND[2] * shade + WATER_MID[2] * (1 - shade)))
-        pygame.draw.line(surf, c, (0, y), (WIDTH, y))  # 绘制线
+        pygame.draw.line(surf, c, (0, y), (WIDTH, y))
 
-    return surf  # 返回表面
+    return surf
 
 
 # ============================================================
 # DRAWING FUNCTIONS
 # ============================================================
-def draw_clouds(surf, time):  # 绘制云函数
+def draw_clouds(surf, time):
     """Draw pixel-art clouds scrolling at different speeds."""
-    colors = [(255, 255, 255), (245, 245, 250), (235, 235, 245)]  # 云颜色
-    layers = [  # 云层
+    colors = [(255, 255, 255), (245, 245, 250), (235, 235, 245)]
+    layers = [
         (0.2, [(100, 50, 60), (400, 80, 50), (650, 40, 70)]),
         (0.5, [(200, 90, 40), (550, 70, 55), (720, 100, 35)]),
         (0.8, [(50, 110, 45), (300, 130, 50), (600, 120, 40)]),
     ]
-    for speed, clouds in layers:  # 循环层
-        offset = int(time * speed * 0.5) % (WIDTH + 200)  # 偏移
-        for cx, cy, size in clouds:  # 循环云
-            x = (cx - offset) % (WIDTH + 200) - 100  # X位置
-            y = cy  # Y位置
+    for speed, clouds in layers:
+        offset = int(time * speed * 0.5) % (WIDTH + 200)
+        for cx, cy, size in clouds:
+            x = (cx - offset) % (WIDTH + 200) - 100
+            y = cy
             # Draw cloud as overlapping circles
-            c = colors[layers.index((speed, clouds))]  # 颜色
-            for dx, dy, r in [(0, 0, size//2), (size//3, -2, size//3),  # 循环绘制圆
+            c = colors[layers.index((speed, clouds))]
+            for dx, dy, r in [(0, 0, size//2), (size//3, -2, size//3),
                               (-size//3, 2, size//3), (size//2, 2, size//4)]:
-                pygame.draw.circle(surf, c, (x + dx, y + dy), r)  # 绘制圆
+                pygame.draw.circle(surf, c, (x + dx, y + dy), r)
 
 
 def draw_ocean(surf, time):
@@ -641,7 +641,7 @@ def draw_shark_fin(surf, x, y, time):
 class Game:
     def __init__(self):
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
-        pygame.display.set_caption("像素冲浪猫娘")
+        pygame.display.set_caption("Pixel Surf Cat")
         self.clock = pygame.time.Clock()
         self.font_large = pygame.font.Font(None, 64)
         self.font_medium = pygame.font.Font(None, 36)
@@ -879,7 +879,7 @@ class Game:
                     bonus = self.combo * 2
                     self.score += bonus
                     self.add_score_popup(PLAYER_X + 30, self.player_y - 85,
-                                         f"连击x{self.combo} +{bonus}",
+                                         f"COMBOx{self.combo} +{bonus}",
                                          UI_PINK)
 
         for obs in to_remove:
@@ -927,7 +927,7 @@ class Game:
                 self.add_particles(obs['rect'].centerx, obs['rect'].centery,
                                    (255, 100, 100), 12)
                 self.add_score_popup(PLAYER_X, self.player_y - 50,
-                                     "哎呀!", (255, 80, 80))
+                                     "OW!", (255, 80, 80))
                 self.obstacles.remove(obs)
                 self.combo = 0
 
@@ -1025,9 +1025,9 @@ class Game:
     def draw_hud(self):
         """Draw score, lives, and combo on screen."""
         # Score
-        score_text = self.font_medium.render(f"分数: {self.score}", True, UI_WHITE)
-        # 分数阴影
-        score_shadow = self.font_medium.render(f"分数: {self.score}", True, UI_BLACK)
+        score_text = self.font_medium.render(f"SCORE: {self.score}", True, UI_WHITE)
+        # Score shadow
+        score_shadow = self.font_medium.render(f"SCORE: {self.score}", True, UI_BLACK)
         self.screen.blit(score_shadow, (11, 11))
         self.screen.blit(score_text, (10, 10))
 
@@ -1044,11 +1044,11 @@ class Game:
 
         # Speed indicator
         speed_pct = int((self.scroll_speed - BASE_SCROLL) / (MAX_SCROLL - BASE_SCROLL) * 100)
-        speed_text = self.font_small.render(f"速度: {speed_pct}%", True, UI_WHITE)
+        speed_text = self.font_small.render(f"SPD: {speed_pct}%", True, UI_WHITE)
         self.screen.blit(speed_text, (WIDTH // 2 - 30, 12))
 
         # Obstacle counter
-        obs_text = self.font_small.render(f"障碍: {len(self.obstacles)}", True, (200, 200, 200))
+        obs_text = self.font_small.render(f"OBS: {len(self.obstacles)}", True, (200, 200, 200))
         self.screen.blit(obs_text, (WIDTH // 2 + 60, 12))
 
     def draw_title(self):
@@ -1067,8 +1067,8 @@ class Game:
         self.screen.blit(overlay, (0, 0))
 
         # Title
-        title = self.font_large.render("像素冲浪猫娘", True, UI_WHITE)
-        title_shadow = self.font_large.render("像素冲浪猫娘", True, UI_BLACK)
+        title = self.font_large.render("PIXEL SURF CAT", True, UI_WHITE)
+        title_shadow = self.font_large.render("PIXEL SURF CAT", True, UI_BLACK)
         title_rect = title.get_rect(center=(WIDTH // 2, 90))
         self.screen.blit(title_shadow, (WIDTH // 2 - title_rect.width // 2 + 2, 92))
         self.screen.blit(title, title_rect)
@@ -1091,12 +1091,12 @@ class Game:
 
         # Start prompt (blinking)
         if int(self.time * 2) % 2 == 0:
-            start_text = self.font_medium.render("按空格键开始", True, UI_GOLD)
+            start_text = self.font_medium.render("PRESS SPACE TO START", True, UI_GOLD)
             start_rect = start_text.get_rect(center=(WIDTH // 2, 320))
             self.screen.blit(start_text, start_rect)
 
         # Footer
-        footer = self.font_small.render("v2.0 - 使用Pygame制作", True, (150, 150, 180))
+        footer = self.font_small.render("v1.0 - Made with Pygame", True, (150, 150, 180))
         self.screen.blit(footer, (WIDTH // 2 - 80, HEIGHT - 30))
 
         # Cat face decoration
@@ -1116,14 +1116,14 @@ class Game:
         self.screen.blit(overlay, (0, 0))
 
         # Game Over text
-        game_over = self.font_large.render("游戏结束", True, (255, 80, 80))
-        go_shadow = self.font_large.render("游戏结束", True, UI_BLACK)
+        game_over = self.font_large.render("GAME OVER", True, (255, 80, 80))
+        go_shadow = self.font_large.render("GAME OVER", True, UI_BLACK)
         go_rect = game_over.get_rect(center=(WIDTH // 2, 100))
         self.screen.blit(go_shadow, (WIDTH // 2 - go_rect.width // 2 + 2, 102))
         self.screen.blit(game_over, go_rect)
 
         # Final score
-        score_label = self.font_medium.render("最终分数", True, (200, 200, 200))
+        score_label = self.font_medium.render("FINAL SCORE", True, (200, 200, 200))
         score_label_rect = score_label.get_rect(center=(WIDTH // 2, 160))
         self.screen.blit(score_label, score_label_rect)
 
@@ -1133,25 +1133,25 @@ class Game:
 
         # Best combo
         if self.combo > 0:
-            combo_text = self.font_small.render(f"最高连击: x{self.combo}", True, UI_PINK)
+            combo_text = self.font_small.render(f"Best Combo: x{self.combo}", True, UI_PINK)
             combo_rect = combo_text.get_rect(center=(WIDTH // 2, 245))
             self.screen.blit(combo_text, combo_rect)
 
         # Stats
         survived = int(self.time)
-        stats = f"存活时间: {survived // 60}:{survived % 60:02d}"
+        stats = f"Survived: {survived // 60}:{survived % 60:02d}"
         stats_text = self.font_small.render(stats, True, (180, 180, 200))
         stats_rect = stats_text.get_rect(center=(WIDTH // 2, 270))
         self.screen.blit(stats_text, stats_rect)
 
         # Restart prompt (blinking)
         if int(self.time * 2) % 2 == 0:
-            restart = self.font_medium.render("按R或空格键重新开始", True, UI_WHITE)
+            restart = self.font_medium.render("PRESS R OR SPACE TO RESTART", True, UI_WHITE)
             restart_rect = restart.get_rect(center=(WIDTH // 2, 330))
             self.screen.blit(restart, restart_rect)
 
         # Quit hint
-        quit_text = self.font_small.render("按ESC退出", True, (120, 120, 140))
+        quit_text = self.font_small.render("Press ESC to quit", True, (120, 120, 140))
         quit_rect = quit_text.get_rect(center=(WIDTH // 2, 365))
         self.screen.blit(quit_text, quit_rect)
 
