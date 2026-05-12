@@ -8,6 +8,7 @@ import random  # 导入随机数模块，用于随机事件
 import math  # 导入数学模块，用于数学计算
 import struct  # 导入结构体模块，用于音频数据处理
 import sys  # 导入系统模块，用于退出程序
+import os  # 导入操作系统模块，用于字体文件路径检测
 
 # ============================================================
 # INITIALIZATION
@@ -638,14 +639,34 @@ def draw_shark_fin(surf, x, y, time):
 # ============================================================
 # GAME CLASS
 # ============================================================
+def load_chinese_font(size):
+    """加载支持中文显示的系统字体，解决中文显示为方框的问题"""
+    # 优先尝试从Windows字体目录加载中文字体文件
+    font_paths = [
+        'C:/Windows/Fonts/msyh.ttc',     # 微软雅黑
+        'C:/Windows/Fonts/msyhbd.ttc',   # 微软雅黑粗体
+        'C:/Windows/Fonts/simhei.ttf',   # 黑体
+        'C:/Windows/Fonts/simsun.ttc',   # 宋体
+    ]
+    for path in font_paths:
+        if os.path.exists(path):
+            return pygame.font.Font(path, size)
+    # 如果字体文件找不到，尝试通过系统名称加载
+    sys_font = pygame.font.SysFont(['microsoftyaheui', 'simhei', 'simsun'], size)
+    if sys_font:
+        return sys_font
+    # 最终回退默认字体（可能不显示中文）
+    return pygame.font.Font(None, size)
+
+
 class Game:
     def __init__(self):
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption("像素冲浪猫娘")
         self.clock = pygame.time.Clock()
-        self.font_large = pygame.font.Font(None, 64)
-        self.font_medium = pygame.font.Font(None, 36)
-        self.font_small = pygame.font.Font(None, 24)
+        self.font_large = load_chinese_font(64)
+        self.font_medium = load_chinese_font(36)
+        self.font_small = load_chinese_font(24)
 
         self.static_bg = render_static_bg()
 
